@@ -1,0 +1,4 @@
+.vscode/
+.env
+env/
+storage/storage-config.json
