@@ -1,6 +1,6 @@
 # Import lib
 from flask import Flask, request, jsonify, make_response
-from keras.preprocessing import image
+from tensorflow.keras.preprocessing import image
 import numpy as np
 import tensorflow as tf
 from PIL import Image
@@ -53,4 +53,4 @@ def predict_malaria(img):
         return "infected"
 
 if(__name__ == "__main__"):
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
