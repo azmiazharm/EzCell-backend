@@ -29,9 +29,15 @@ def process_malaria():
     if not file:
         return make_response(jsonify(success=False, message='File not found'), 400)
 
-    img = resize_img(file.read())
+    try:
+        img = resize_img(file.read())
 
-    result = predict_malaria(img)
+        result = predict_malaria(img)
+    except ValueError:
+        return make_response(jsonify(success=False, message='Unsupported image'), 400)
+    except:
+        return make_response(jsonify(success=False, message='An error has occured'), 400)
+
 
     time_taken = '{} s'.format(round(time.time() - start, 2))
     print(time_taken)
