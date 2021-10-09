@@ -4,14 +4,15 @@ from tensorflow.keras.preprocessing import image
 import numpy as np
 import tensorflow as tf
 from PIL import Image
-import io
-import time
+import io, time
+from google.cloud import storage
 
 # Import ML model
 malaria_model = tf.keras.models.load_model('./model/malaria-90.h5')
 
 # Define flask app
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1000 * 1000
 
 @app.route('/')
 def index():
@@ -19,18 +20,18 @@ def index():
 
 
 @app.route('/process-malaria', methods=['POST'])
-def process_malaria():
+def process_malaria() -> str:
     start = time.time()
 
     if 'file' not in request.files:
         return make_response(jsonify(success=False, message='File not found'), 400)
 
-    file = request.files.get('file')
-    if not file:
+    uploaded_file = request.files.get('file')
+    if not uploaded_file:
         return make_response(jsonify(success=False, message='File not found'), 400)
 
     try:
-        img = resize_img(file.read())
+        img = resize_img(uploaded_file.read())
 
         result = predict_malaria(img)
     except ValueError:
@@ -38,10 +39,22 @@ def process_malaria():
     except:
         return make_response(jsonify(success=False, message='An error has occured'), 400)
 
+    # Upload Handler
+    gcs = storage.Client.from_service_account_json(
+        'storage/storage-config.json')
+
+    bucket = gcs.get_bucket('ezcell')
+
+    blob = bucket.blob(uploaded_file.filename)
+
+    blob.upload_from_string(
+        uploaded_file.read(),
+        content_type=uploaded_file.content_type
+    )
 
     time_taken = '{} s'.format(round(time.time() - start, 2))
     print(time_taken)
-    return jsonify(success=True, result=result, process_time=time_taken)
+    return jsonify(success=True, result=result, url=blob.public_url, process_time=time_taken)
 
 def resize_img(img):
     img = Image.open(io.BytesIO(img))
